@@ -1,0 +1,128 @@
+[
+  {
+    "officialId": "STATE_ADMIN_RJ",
+    "phone": "9829012345",
+    "password": "admin123",
+    "role": "administrator",
+    "name": "Aditi Sharma",
+    "designation": "State Procurement Director",
+    "state": "Rajasthan"
+  },
+  {
+    "officialId": "CA_KHERLI_01",
+    "phone": "9829011223",
+    "password": "kherli123",
+    "role": "centre_admin",
+    "centreId": "C001",
+    "centreName": "Kherli Krishi Upaj Mandi",
+    "name": "Rajesh Sharma"
+  },
+  {
+    "officialId": "CA_MAHWA_02",
+    "phone": "9829044556",
+    "password": "mahwa123",
+    "role": "centre_admin",
+    "centreId": "C002",
+    "centreName": "Mahwa Procurement Hub",
+    "name": "Vikram Meena"
+  },
+  {
+    "officialId": "CA_MANDAWAR_03",
+    "phone": "9829077889",
+    "password": "mandawar123",
+    "role": "centre_admin",
+    "centreId": "C003",
+    "centreName": "Mandawar Grain Center",
+    "name": "Anil Gurjar"
+  },
+  {
+    "officialId": "QO_KHERLI_01",
+    "phone": "9829011225",
+    "password": "quality123",
+    "role": "quality_officer",
+    "centreId": "C001",
+    "centreName": "Kherli Krishi Upaj Mandi",
+    "name": "Inspector Verma (Quality Lab)"
+  },
+  {
+    "officialId": "WO_KHERLI_01",
+    "phone": "9829011226",
+    "password": "weigh123",
+    "role": "weighing_officer",
+    "centreId": "C001",
+    "centreName": "Kherli Krishi Upaj Mandi",
+    "name": "Ramesh Chand (Weighbridge Desk)"
+  },
+  {
+    "officialId": "CK_MAHWA_02",
+    "phone": "9829044557",
+    "password": "gate123",
+    "role": "checkin_officer",
+    "centreId": "C002",
+    "centreName": "Mahwa Procurement Hub",
+    "name": "Gopal Meena (Gate Check-In)"
+  },
+  {
+    "officialId": "QO_MAHWA_02",
+    "phone": "9829044558",
+    "password": "quality123",
+    "role": "quality_officer",
+    "centreId": "C002",
+    "centreName": "Mahwa Procurement Hub",
+    "name": "Pooja Sharma (Quality Lab)"
+  },
+  {
+    "officialId": "WO_MAHWA_02",
+    "phone": "9829044559",
+    "password": "weigh123",
+    "role": "weighing_officer",
+    "centreId": "C002",
+    "centreName": "Mahwa Procurement Hub",
+    "name": "Mahesh Yadav (Weighbridge Desk)"
+  },
+  {
+    "officialId": "CK_MANDAWAR_03",
+    "phone": "9829077890",
+    "password": "gate123",
+    "role": "checkin_officer",
+    "centreId": "C003",
+    "centreName": "Mandawar Grain Center",
+    "name": "Dinesh Saini (Gate Check-In)"
+  },
+  {
+    "officialId": "QO_MANDAWAR_03",
+    "phone": "9829077891",
+    "password": "quality123",
+    "role": "quality_officer",
+    "centreId": "C003",
+    "centreName": "Mandawar Grain Center",
+    "name": "Babulal Gurjar (Quality Lab)"
+  },
+  {
+    "officialId": "WO_MANDAWAR_03",
+    "phone": "9829077892",
+    "password": "weigh123",
+    "role": "weighing_officer",
+    "centreId": "C003",
+    "centreName": "Mandawar Grain Center",
+    "name": "Kailash Chand (Weighbridge Desk)"
+  },
+  {
+    "officialId": "ADITYA_A",
+    "password": "12345678",
+    "role": "centre_admin",
+    "centreId": "C004",
+    "centreName": "JECRC",
+    "name": "Aditya",
+    "phone": "9999999999"
+  },
+  {
+    "officialId": "CK_C001_30",
+    "password": "88888888",
+    "role": "checkin_officer",
+    "centreId": "C001",
+    "centreName": "Kherli Krishi Upaj Mandi",
+    "name": "Angel",
+    "phone": "8888888888"
+  }
+]
