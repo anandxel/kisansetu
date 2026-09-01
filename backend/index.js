@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 5000;
 // Initialize WebSocket Server on same HTTP port
 const wss = new WebSocketServer({ server });
 
-// Active WebSocket client management and event broadcasting
+// Active WebSocket client management and event broadcasting rules
 export function broadcastEvent(type, payload) {
   const message = JSON.stringify({
     type,
