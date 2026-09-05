@@ -37,12 +37,12 @@ export function DynamicQRCode({
           const tonnes = payloadData.expectedTonnes || payloadData.actualWeightTonnes || "5.0";
 
           // Standard universal URL recognized instantly by Apple Camera, Google Lens, Samsung Camera, and QR apps
-          contentToEncode = `https://kisansetu.gov.in/pass?id=${encodeURIComponent(bId)}&farmer=${encodeURIComponent(fName)}&crop=${encodeURIComponent(crop)}&qty=${encodeURIComponent(tonnes)}T&date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}&centre=${encodeURIComponent(centre)}`;
+          contentToEncode = `https://kisansaathi.gov.in/pass?id=${encodeURIComponent(bId)}&farmer=${encodeURIComponent(fName)}&crop=${encodeURIComponent(crop)}&qty=${encodeURIComponent(tonnes)}T&date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}&centre=${encodeURIComponent(centre)}`;
         } else if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
           contentToEncode = value;
         } else {
           const tokenStr = String(value || "KKS-PASS-001");
-          contentToEncode = `https://kisansetu.gov.in/pass?id=${encodeURIComponent(tokenStr)}`;
+          contentToEncode = `https://kisansaathi.gov.in/pass?id=${encodeURIComponent(tokenStr)}`;
         }
 
         if (isMounted) {

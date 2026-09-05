@@ -1,5 +1,5 @@
 /**
- * KisanSetu Frontend API Client
+ * KisanSaathi Frontend API Client
  * Exclusively communicates with the Express Backend (which interfaces with Supabase DB)
  */
 
@@ -47,6 +47,22 @@ export async function apiLoginOfficial({ officialId, password, role, centreId })
 
 export async function apiRequestAadhaarOtp(aadhaar) {
   return await apiRequest("/api/auth/aadhaar-otp", "POST", { aadhaar });
+}
+
+export async function apiVerifyAadhaarOtp(aadhaar, code, phone) {
+  return await apiRequest("/api/auth/verify-aadhaar-otp", "POST", { aadhaar, code, phone });
+}
+
+export async function apiSendSmsOtp(phone) {
+  return await apiRequest("/api/auth/send-sms-otp", "POST", { phone });
+}
+
+export async function apiVerifySmsOtp(phone, code) {
+  return await apiRequest("/api/auth/verify-sms-otp", "POST", { phone, code });
+}
+
+export async function apiResetPassword({ identifier, otp, newPassword, role }) {
+  return await apiRequest("/api/auth/reset-password", "POST", { identifier, otp, newPassword, role });
 }
 
 export async function apiRegisterFarmer(farmerData) {

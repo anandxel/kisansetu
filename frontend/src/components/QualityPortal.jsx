@@ -84,7 +84,7 @@ export function QualityPortal({
           <div className="sidebar-logo-icon">
             <Sprout size={20} />
           </div>
-          <span className="sidebar-brand-name">KisanSetu</span>
+          <span className="sidebar-brand-name">KisanSaathi</span>
         </div>
       </div>
 
@@ -97,8 +97,7 @@ export function QualityPortal({
               <Sprout size={24} />
             </div>
             <div className="sidebar-brand-text">
-              <span className="brand-title">Kisan</span>
-              <span className="brand-subtitle">Setu</span>
+              <span className="brand-title">KisanSaathi</span>
             </div>
           </div>
 

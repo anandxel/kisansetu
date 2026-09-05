@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
- * Custom React hook for robust, resilient WebSocket communication with KisanSetu backend.
+ * Custom React hook for robust, resilient WebSocket communication with KisanSaathi backend.
  * Provides automatic reconnect with exponential backoff and live message dispatching.
  */
 export function useRealtime({ onEvent } = {}) {
@@ -38,7 +38,7 @@ export function useRealtime({ onEvent } = {}) {
       ws.onopen = () => {
         setIsConnected(true);
         reconnectAttempts.current = 0;
-        console.log("[KisanSetu WebSocket] Connected to real-time gateway at", url);
+        console.log("[KisanSaathi WebSocket] Connected to real-time gateway at", url);
       };
 
       ws.onmessage = (event) => {
@@ -49,7 +49,7 @@ export function useRealtime({ onEvent } = {}) {
             onEvent(data);
           }
         } catch (err) {
-          console.warn("[KisanSetu WebSocket] Failed to parse message:", err);
+          console.warn("[KisanSaathi WebSocket] Failed to parse message:", err);
         }
       };
 
@@ -63,11 +63,11 @@ export function useRealtime({ onEvent } = {}) {
       };
 
       ws.onerror = (err) => {
-        console.warn("[KisanSetu WebSocket] Connection notice:", err.message || "reconnecting");
+        console.warn("[KisanSaathi WebSocket] Connection notice:", err.message || "reconnecting");
         ws.close();
       };
     } catch (err) {
-      console.warn("[KisanSetu WebSocket] Init error:", err);
+      console.warn("[KisanSaathi WebSocket] Init error:", err);
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     }
   }, [getWsUrl, onEvent]);

@@ -79,15 +79,15 @@ export function App() {
       case "BOOKING_CREATED":
         setBookings(prev => {
           if (prev.some(b => b.id === payload.id)) return prev;
+          if (payload.centreId && payload.expectedTonnes) {
+            setCentres(cPrev => cPrev.map(c => 
+              c.id === payload.centreId 
+                ? { ...c, reservedTonnes: (c.reservedTonnes || 0) + Number(payload.expectedTonnes) }
+                : c
+            ));
+          }
           return [payload, ...prev];
         });
-        if (payload.centreId && payload.expectedTonnes) {
-          setCentres(prev => prev.map(c => 
-            c.id === payload.centreId 
-              ? { ...c, reservedTonnes: (c.reservedTonnes || 0) + Number(payload.expectedTonnes) }
-              : c
-          ));
-        }
         break;
 
       case "BOOKING_UPDATED":
@@ -293,8 +293,10 @@ export function App() {
 
   // Farmer Actions
   const handleBookSlot = async (bookingData) => {
-    const res = await apiCreateBooking(bookingData);
-    setBookings(prev => [bookingData, ...prev]);
+    setBookings(prev => {
+      if (prev.some(b => b.id === bookingData.id)) return prev;
+      return [bookingData, ...prev];
+    });
 
     setCentres(prev => prev.map(c => {
       if (c.id === bookingData.centreId) {
@@ -302,6 +304,12 @@ export function App() {
       }
       return c;
     }));
+
+    try {
+      await apiCreateBooking(bookingData);
+    } catch (err) {
+      console.error("Booking error:", err);
+    }
   };
 
   const handleCancelBooking = (bookingId) => {

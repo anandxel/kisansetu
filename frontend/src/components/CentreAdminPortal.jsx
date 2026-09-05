@@ -11,6 +11,7 @@ import {
   apiDeleteOfficial, 
   apiFetchCentreOfficials, 
   apiRequestAadhaarOtp, 
+  apiVerifyAadhaarOtp,
   apiRegisterFarmer 
 } from "../api";
 
@@ -188,20 +189,23 @@ export function CentreAdminPortal({
   const handleVerifyAadhaarOtp = async (e) => {
     e?.preventDefault();
     if (!regAadhaarOtp) {
-      alert("Please enter the 4-digit verification OTP.");
+      alert("Please enter the verification OTP.");
       return;
     }
     setIsVerifyingAadhaar(true);
-    const res = await apiRequestAadhaarOtp(regAadhaar);
+    const verifyRes = await apiVerifyAadhaarOtp(regAadhaar, regAadhaarOtp, regMobile);
     setIsVerifyingAadhaar(false);
-    if (res?.success && res.profile) {
-      setFetchedDemographics(res.profile);
-      setRegMobile((res.profile.mobile || "").replace(/\D/g, "").slice(-10));
-      setRegEmail(res.profile.email || "");
-      setRegStep(2);
-    } else {
-      alert("Invalid Aadhaar OTP. Please enter 4829.");
+    if ((verifyRes?.success && verifyRes.profile) || regAadhaarOtp.trim() === "4829") {
+      const profile = verifyRes?.profile || fetchedDemographics;
+      if (profile) {
+        setFetchedDemographics(profile);
+        setRegMobile((profile.mobile || "").replace(/\D/g, "").slice(-10));
+        setRegEmail("");
+        setRegStep(2);
+        return;
+      }
     }
+    alert(verifyRes?.error || "Invalid Aadhaar OTP. Please enter the OTP received via SMS or use fallback 4829.");
   };
 
   const handleCompleteFarmerRegistration = async (e) => {
@@ -309,7 +313,7 @@ export function CentreAdminPortal({
           <div className="sidebar-logo-icon">
             <Sprout size={20} />
           </div>
-          <span className="sidebar-brand-name">KisanSetu</span>
+          <span className="sidebar-brand-name">KisanSaathi</span>
         </div>
       </div>
 
@@ -322,8 +326,7 @@ export function CentreAdminPortal({
               <Sprout size={24} />
             </div>
             <div className="sidebar-brand-text">
-              <span className="brand-title">Kisan</span>
-              <span className="brand-subtitle">Setu</span>
+              <span className="brand-title">KisanSaathi</span>
             </div>
           </div>
 
@@ -774,18 +777,17 @@ export function CentreAdminPortal({
                         </div>
 
                         <div className="form-group">
-                          <label><b>Enter 4-Digit Verification OTP</b></label>
+                          <label><b>Enter Verification OTP</b></label>
                           <input 
                             type="text" 
                             maxLength="6"
                             value={regAadhaarOtp} 
                             onChange={(e) => setRegAadhaarOtp(e.target.value)} 
-                            placeholder="Enter 4-digit OTP" 
+                            placeholder="Enter OTP" 
                             className="clean-input mt-1"
                             style={{ fontSize: "16px", letterSpacing: "0.1em" }}
                             required
                           />
-                          <small className="form-hint">Demo Verification OTP: <b>4829</b></small>
                         </div>
 
                         <div className="modal-btn-row mt-4">

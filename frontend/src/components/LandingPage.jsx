@@ -9,7 +9,11 @@ import {
   apiLoginFarmer, 
   apiLoginOfficial, 
   apiRequestAadhaarOtp, 
-  apiRegisterFarmer 
+  apiVerifyAadhaarOtp,
+  apiRegisterFarmer,
+  apiSendSmsOtp,
+  apiVerifySmsOtp,
+  apiResetPassword
 } from "../api";
 import { LanguageSelector } from "./LanguageSelector";
 
@@ -33,7 +37,15 @@ export function LandingPage({
   // Forgot password modal state
   const [forgotPassModal, setForgotPassModal] = useState(null); // null | "farmer" | "official"
   const [forgotPassInput, setForgotPassInput] = useState("");
-  const [forgotPassDone, setForgotPassDone] = useState(false);
+  const [forgotPassOtp, setForgotPassOtp] = useState("");
+  const [forgotPassNewPassword, setForgotPassNewPassword] = useState("");
+  const [forgotPassConfirmPassword, setForgotPassConfirmPassword] = useState("");
+  const [showForgotNewPass, setShowForgotNewPass] = useState(false);
+  const [showForgotConfirmPass, setShowForgotConfirmPass] = useState(false);
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
+  const [isSendingForgotOtp, setIsSendingForgotOtp] = useState(false);
+  const [isResettingPass, setIsResettingPass] = useState(false);
+  const [forgotPassToast, setForgotPassToast] = useState("");
 
   // Official form state
   const [selectedOfficialRole, setSelectedOfficialRole] = useState("administrator");
@@ -122,11 +134,11 @@ export function LandingPage({
       const res = await apiRequestAadhaarOtp(regAadhaar);
       if (res?.success) {
         setAadhaarOtpSent(true);
-        setRegAadhaarOtp(res.demoOtp || "4829");
+        setRegAadhaarOtp(""); // Never prefill OTP - user enters SMS OTP or fallback 4829
         if (res.profile) {
           setFetchedDemographics(res.profile);
           setRegMobile(res.profile.mobile ? res.profile.mobile.replace(/\D/g, "").slice(-10) : "");
-          setRegEmail(res.profile.email || "");
+          setRegEmail(""); // Never prefill email - remains optional and blank
         }
       } else {
         alert(res?.error || "Failed to verify Aadhaar with UIDAI gateway.");
@@ -143,22 +155,24 @@ export function LandingPage({
   const handleVerifyAadhaarOtp = async (e) => {
     e?.preventDefault();
     if (!regAadhaarOtp) {
-      alert("Please enter the 4-digit Aadhaar OTP.");
+      alert("Please enter the verification OTP.");
       return;
     }
     setIsVerifyingAadhaar(true);
     try {
-      let profile = fetchedDemographics;
-      if (!profile) {
-        const res = await apiRequestAadhaarOtp(regAadhaar);
-        if (res?.success && res.profile) {
-          profile = res.profile;
-          setFetchedDemographics(profile);
-        }
+      const targetPhone = (fetchedDemographics?.mobile || regMobile || "").replace(/\D/g, "");
+      const verifyRes = await apiVerifyAadhaarOtp(regAadhaar, regAadhaarOtp, targetPhone);
+      if (!verifyRes?.success && regAadhaarOtp.trim() !== "4829") {
+        alert(verifyRes?.error || "Invalid Aadhaar verification OTP. Please enter the OTP received via SMS or use fallback 4829.");
+        setIsVerifyingAadhaar(false);
+        return;
       }
+
+      const profile = verifyRes?.profile || fetchedDemographics;
       if (profile) {
+        setFetchedDemographics(profile);
         setRegMobile(profile.mobile ? profile.mobile.replace(/\D/g, "").slice(-10) : "");
-        setRegEmail(profile.email || "");
+        setRegEmail(""); // Keep email blank
         setRegStep(2); // Proceed to Demographic Confirmation
       } else {
         alert("Could not fetch UIDAI demographic record. Please try again.");
@@ -176,25 +190,29 @@ export function LandingPage({
     if (fetchedDemographics?.mobile) {
       setRegMobile(fetchedDemographics.mobile.replace(/\D/g, "").slice(-10));
     }
-    if (fetchedDemographics?.email) {
-      setRegEmail(fetchedDemographics.email);
-    }
+    setRegEmail(""); // Strictly leave email empty so it is not prefilled
     setRegStep(3); // Proceed to Contact & Password setup
   };
 
-  // Registration Step 3: Send Mobile/Email OTP
-  const handleSendMobileOtp = (e) => {
+  // Registration Step 3: Send Mobile/Email OTP (Unique OTP dispatched)
+  const handleSendMobileOtp = async (e) => {
     e?.preventDefault();
     if (!regMobile || regMobile.length < 10) {
       alert("Please enter a valid 10-digit mobile number.");
       return;
     }
     setIsSendingMobileOtp(true);
-    setTimeout(() => {
-      setIsSendingMobileOtp(false);
+    try {
+      await apiSendSmsOtp(regMobile);
       setMobileOtpSent(true);
-      setRegMobileOtp("4829");
-    }, 500);
+      setRegMobileOtp(""); // Never prefill OTP - user enters unique SMS OTP or fallback 4829
+    } catch (err) {
+      console.warn("Live OTP notice:", err);
+      setMobileOtpSent(true);
+      setRegMobileOtp(""); // Never prefill OTP
+    } finally {
+      setIsSendingMobileOtp(false);
+    }
   };
 
   // Registration Step 3: Complete Account Creation & Save to Supabase Database
@@ -210,35 +228,42 @@ export function LandingPage({
     }
 
     setIsCreatingAccount(true);
-    const newFarmerProfile = {
-      role: "farmer",
-      farmerId: fetchedDemographics.farmerId || ("F" + Math.floor(100 + Math.random() * 900)),
-      farmerName: fetchedDemographics.farmerName,
-      fatherName: fetchedDemographics.fatherName,
-      dob: fetchedDemographics.dob,
-      age: fetchedDemographics.age,
-      gender: fetchedDemographics.gender,
-      mobile: `+91 ${regMobile}`,
-      email: regEmail || fetchedDemographics.email || "",
-      aadhaar: regAadhaar,
-      aadhaarMasked: `XXXX-XXXX-${regAadhaar.slice(-4)}`,
-      village: fetchedDemographics.village,
-      tehsil: fetchedDemographics.tehsil,
-      district: fetchedDemographics.district,
-      state: fetchedDemographics.state,
-      pincode: fetchedDemographics.pincode,
-      address: fetchedDemographics.address,
-      bankName: fetchedDemographics.bankName || "State Bank of India",
-      accountMasked: fetchedDemographics.accountMasked || "XXXX-XXXX-8921",
-      accountNo: fetchedDemographics.accountNo || "308291048921",
-      accountHolderName: fetchedDemographics.accountHolderName || fetchedDemographics.farmerName,
-      ifsc: fetchedDemographics.ifsc || "SBIN0001429",
-      branch: fetchedDemographics.branch || "Main Branch",
-      isNewRegistration: true,
-      agriStackLands: fetchedDemographics.agriStackLands || []
-    };
-
     try {
+      const verifyRes = await apiVerifySmsOtp(regMobile, regMobileOtp);
+      if (!verifyRes?.success && regMobileOtp.trim() !== "4829") {
+        alert(verifyRes?.error || "Invalid mobile verification OTP. Please enter the OTP received via SMS or use fallback 4829.");
+        setIsCreatingAccount(false);
+        return;
+      }
+
+      const newFarmerProfile = {
+        role: "farmer",
+        farmerId: fetchedDemographics.farmerId || ("F" + Math.floor(100 + Math.random() * 900)),
+        farmerName: fetchedDemographics.farmerName,
+        fatherName: fetchedDemographics.fatherName,
+        dob: fetchedDemographics.dob,
+        age: fetchedDemographics.age,
+        gender: fetchedDemographics.gender,
+        mobile: `+91 ${regMobile}`,
+        email: regEmail ? regEmail.trim() : "",
+        aadhaar: regAadhaar,
+        aadhaarMasked: `XXXX-XXXX-${regAadhaar.slice(-4)}`,
+        village: fetchedDemographics.village,
+        tehsil: fetchedDemographics.tehsil,
+        district: fetchedDemographics.district,
+        state: fetchedDemographics.state,
+        pincode: fetchedDemographics.pincode,
+        address: fetchedDemographics.address,
+        bankName: fetchedDemographics.bankName || "State Bank of India",
+        accountMasked: fetchedDemographics.accountMasked || "XXXX-XXXX-8921",
+        accountNo: fetchedDemographics.accountNo || "308291048921",
+        accountHolderName: fetchedDemographics.accountHolderName || fetchedDemographics.farmerName,
+        ifsc: fetchedDemographics.ifsc || "SBIN0001429",
+        branch: fetchedDemographics.branch || "Main Branch",
+        isNewRegistration: true,
+        agriStackLands: fetchedDemographics.agriStackLands || []
+      };
+
       const res = await apiRegisterFarmer(newFarmerProfile);
       const registeredUser = (res?.success && res?.data) ? {
         ...newFarmerProfile,
@@ -248,15 +273,85 @@ export function LandingPage({
       onLoginSuccess(registeredUser);
     } catch (err) {
       console.error("Register farmer error:", err);
-      onLoginSuccess(newFarmerProfile);
+      alert("Error completing registration. Please check your connection.");
     } finally {
       setIsCreatingAccount(false);
     }
   };
 
-  const handleForgotPasswordSubmit = (e) => {
+  const handleSendForgotOtp = async () => {
+    const cleanPhone = forgotPassInput.replace(/\D/g, "").slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      alert("Please enter a valid 10-digit mobile number to receive the OTP.");
+      return;
+    }
+    setIsSendingForgotOtp(true);
+    try {
+      await apiSendSmsOtp(cleanPhone);
+      setForgotOtpSent(true);
+    } catch (err) {
+      console.warn("Send forgot OTP notice:", err);
+      setForgotOtpSent(true);
+    } finally {
+      setIsSendingForgotOtp(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
-    setForgotPassDone(true);
+    if (!forgotPassInput) {
+      alert("Please enter your registered mobile number or Officer ID.");
+      return;
+    }
+    if (!forgotPassOtp) {
+      alert("Please enter the verification OTP.");
+      return;
+    }
+    if (!forgotPassNewPassword || forgotPassNewPassword.length < 4) {
+      alert("Please enter a new password (at least 4 characters).");
+      return;
+    }
+    if (forgotPassNewPassword !== forgotPassConfirmPassword) {
+      alert("New Password and Confirm New Password do not match. Please ensure both passwords match.");
+      return;
+    }
+
+    setIsResettingPass(true);
+    try {
+      // apiResetPassword validates OTP (live Twilio, in-memory, or 4829 fallback) and updates password in DB atomically
+      const res = await apiResetPassword({
+        identifier: forgotPassInput,
+        otp: forgotPassOtp,
+        newPassword: forgotPassNewPassword,
+        role: forgotPassModal
+      });
+
+      if (res?.success) {
+        setForgotPassToast(t("passwordResetSuccess") || "Password updated successfully! You can now sign in.");
+        if (forgotPassModal === "farmer") {
+          setFarmerMobile(forgotPassInput.replace(/\D/g, "").slice(-10));
+          setFarmerPass(forgotPassNewPassword);
+        } else {
+          setOfficialId(forgotPassInput);
+          setOfficialPass(forgotPassNewPassword);
+        }
+        setTimeout(() => {
+          setForgotPassModal(null);
+          setForgotPassToast("");
+          setForgotPassOtp("");
+          setForgotPassNewPassword("");
+          setForgotPassConfirmPassword("");
+          setForgotOtpSent(false);
+        }, 1600);
+      } else {
+        alert(res?.error || t("passwordResetFailed") || "Failed to reset password. Please check your OTP and try again.");
+      }
+    } catch (err) {
+      console.error("Forgot pass submit error:", err);
+      alert("Failed to communicate with server. Please try again.");
+    } finally {
+      setIsResettingPass(false);
+    }
   };
 
   return (
@@ -340,11 +435,10 @@ export function LandingPage({
                           maxLength="6"
                           value={regAadhaarOtp} 
                           onChange={(e) => setRegAadhaarOtp(e.target.value)} 
-                          placeholder="Enter 4-digit OTP" 
+                          placeholder="Enter OTP" 
                           className="clean-input mt-1"
                           required
                         />
-                        <small className="form-hint">Verification OTP: <b>4829</b></small>
                       </div>
 
                       <button type="submit" disabled={isVerifyingAadhaar} className="btn-auth-submit mt-4">
@@ -489,17 +583,16 @@ export function LandingPage({
                       </div>
 
                       <div className="form-group mt-3">
-                        <label>Enter Mobile OTP</label>
+                        <label><b>Enter OTP</b></label>
                         <input 
                           type="text" 
                           maxLength="6"
                           value={regMobileOtp} 
                           onChange={(e) => setRegMobileOtp(e.target.value)} 
-                          placeholder="Enter 4-digit OTP" 
+                          placeholder="Enter OTP" 
                           className="aadhaar-input-large"
                           required 
                         />
-                        <small className="form-hint">Verification OTP: <b>4829</b></small>
                       </div>
 
                       <button type="submit" disabled={isCreatingAccount} className="btn-auth-submit mt-4">
@@ -646,7 +739,7 @@ export function LandingPage({
                         <button 
                           type="button" 
                           className="btn-link-forgot"
-                          onClick={() => { setForgotPassModal("farmer"); setForgotPassDone(false); setForgotPassInput(farmerMobile); }}
+                          onClick={() => { setForgotPassModal("farmer"); setForgotPassInput(farmerMobile); }}
                         >
                           {t("forgotPassword")}
                         </button>
@@ -759,7 +852,7 @@ export function LandingPage({
                         <button 
                           type="button" 
                           className="btn-link-forgot"
-                          onClick={() => { setForgotPassModal("official"); setForgotPassDone(false); setForgotPassInput(officialId); }}
+                          onClick={() => { setForgotPassModal("official"); setForgotPassInput(officialId); }}
                         >
                           {t("forgotPassword")}
                         </button>
@@ -789,46 +882,122 @@ export function LandingPage({
         <div className="modal-backdrop">
           <div className="modal-card">
             <div className="modal-head">
-              <h3>Reset Password</h3>
-              <button className="close-btn" onClick={() => setForgotPassModal(null)}>✕</button>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <KeyRound size={20} className="teal-text" />
+                <h3 style={{ margin: 0 }}>{t("resetPassword")}</h3>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <LanguageSelector currentLang={currentLang} onLangChange={onLangChange} />
+                <button className="close-btn" onClick={() => setForgotPassModal(null)} aria-label={t("close")}>✕</button>
+              </div>
             </div>
             
-            {!forgotPassDone ? (
-              <form onSubmit={handleForgotPasswordSubmit} className="modal-form">
-                <p className="forgot-modal-desc">
-                  {forgotPassModal === "farmer" 
-                    ? "Enter your registered mobile number or Farmer ID to receive a verification OTP."
-                    : "Enter your official Officer ID or registered official email to receive a password reset link."
-                  }
-                </p>
+            {forgotPassToast && (
+              <div className="forgot-success-banner">
+                <CheckCircle2 size={20} className="teal-text" />
+                <span>{forgotPassToast}</span>
+              </div>
+            )}
 
-                <div className="form-group mt-3">
-                  <label>{forgotPassModal === "farmer" ? "Registered Mobile Number" : "Officer ID / Email"}</label>
+            <form onSubmit={handleForgotPasswordSubmit} className="modal-form">
+              <div className="form-group">
+                <label><b>{forgotPassModal === "farmer" ? (t("registeredMobileNumber") || t("mobileNumber")) : (t("officerIdOrMobile") || t("officerId"))}</b></label>
+                <div className="input-group-with-btn mt-1">
                   <input 
                     type="text" 
                     value={forgotPassInput} 
                     onChange={(e) => setForgotPassInput(e.target.value)} 
-                    placeholder={forgotPassModal === "farmer" ? "Enter registered mobile number" : "Enter officer ID"}
+                    placeholder={forgotPassModal === "farmer" ? t("enterTenDigitMobile") : t("enterOfficerIdOrMobile")}
+                    className="clean-input"
                     required 
                   />
+                  <button 
+                    type="button" 
+                    onClick={handleSendForgotOtp} 
+                    disabled={isSendingForgotOtp}
+                    className="btn-send-otp"
+                  >
+                    {isSendingForgotOtp ? t("sendingOtp") : forgotOtpSent ? t("resendOtp") : t("sendOtp")}
+                  </button>
                 </div>
-
-                <button type="submit" className="btn-primary mt-4 w-100">
-                  Send Reset Verification
-                </button>
-              </form>
-            ) : (
-              <div className="forgot-success-box">
-                <CheckCircle2 size={36} className="teal-text" />
-                <h4>Reset Link / OTP Dispatched</h4>
-                <p>
-                  A temporary password reset link and 6-digit OTP has been sent to your registered contact channel.
-                </p>
-                <button className="btn-primary mt-3" onClick={() => setForgotPassModal(null)}>
-                  Return to Sign In
-                </button>
+                {forgotOtpSent && (
+                  <small className="form-hint" style={{ color: "#0f766e", fontWeight: 600 }}>
+                    ✓ {t("otpSentSuccess")} {forgotPassInput}
+                  </small>
+                )}
               </div>
-            )}
+
+              {/* Directly ask for OTP */}
+              <div className="form-group mt-3">
+                <label><b>{t("enterOtp")}</b></label>
+                <input 
+                  type="text" 
+                  maxLength="6"
+                  value={forgotPassOtp} 
+                  onChange={(e) => setForgotPassOtp(e.target.value)} 
+                  placeholder={t("enterOtp")}
+                  className="clean-input mt-1"
+                  required 
+                />
+              </div>
+
+              {/* Below it, ask for New Password */}
+              <div className="form-group mt-3">
+                <label><b>{t("newPassword")}</b></label>
+                <div className="input-with-icon mt-1">
+                  <KeyRound size={18} />
+                  <input 
+                    type={showForgotNewPass ? "text" : "password"} 
+                    value={forgotPassNewPassword} 
+                    onChange={(e) => setForgotPassNewPassword(e.target.value)} 
+                    placeholder={t("enterNewPassword")} 
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="btn-toggle-eye" 
+                    onClick={() => setShowForgotNewPass(!showForgotNewPass)}
+                    aria-label="Toggle password visibility"
+                  >
+                    {showForgotNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password */}
+              <div className="form-group mt-3">
+                <label><b>{t("confirmNewPassword")}</b></label>
+                <div className="input-with-icon mt-1">
+                  <KeyRound size={18} />
+                  <input 
+                    type={showForgotConfirmPass ? "text" : "password"} 
+                    value={forgotPassConfirmPassword} 
+                    onChange={(e) => setForgotPassConfirmPassword(e.target.value)} 
+                    placeholder={t("reEnterNewPassword")} 
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="btn-toggle-eye" 
+                    onClick={() => setShowForgotConfirmPass(!showForgotConfirmPass)}
+                    aria-label="Toggle password visibility"
+                  >
+                    {showForgotConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" disabled={isResettingPass} className="btn-auth-submit mt-4">
+                {isResettingPass ? (
+                  <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    <span>{t("updatingPassword")}</span>
+                  </>
+                ) : (
+                  <span>{t("submitAndUpdatePassword")}</span>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}
